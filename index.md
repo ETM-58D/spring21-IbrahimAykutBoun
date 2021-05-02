@@ -1,7 +1,9 @@
 ## Example Progress Journal
 
-## Week 0 (April 4)
+## Homework 0
 
 [Here](files/example_homework_0.html) is my 5 interesting R examples
+
+## Homework 1
 
 [Here](files/EVDS-HW1.html) is my Homework 1
