@@ -10,4 +10,4 @@
 
 ## Homework 2
 
-[Here](files/Homework2) is my Homework 2
+[Here](files/Homework2.html) is my Homework 2
