@@ -1,0 +1,107 @@
+---
+title: "Homework2"
+author: "Ibrahim Aykut"
+date: "06 06 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+We read the file and to name rows as city names.
+
+
+```{r}
+cities=read.csv("HW2_q1_data2.csv")
+rownames(cities)<- c("ADANA",	"ADIYAMAN",	"AFYON",	"AĞRI",	"AMASYA",	"ANKARA",	"ANTALYA",	"ARTVİN",	"AYDIN",	"BALIKESİR",	"BİLECİK",	"BİNGÖL",	"BİTLİS",	"BOLU",	"BURDUR",	"BURSA",	"ÇANAKKALE",	"ÇANKIRI",	"ÇORUM",	"DENİZLİ",	"DİYARBAKIR",	"EDİRNE",	"ELAZIĞ",	"ERZİNCAN",	"ERZURUM",	"ESKİŞEHİR",	"GAZİANTEP",	"GİRESUN",	"GÜMÜŞHANE",	"HAKKARİ",	"HATAY",	"ISPARTA",	"İÇEL",	"İSTANBUL",	"İZMİR",	"KARS",	"KASTAMONU",	"KAYSERİ",	"KIRKLARELİ",	"KIRŞEHİR",	"KOCAELİ",	"KONYA",	"KÜTAHYA",	"MALATYA",	"MANİSA",	"KAHRAMANMARAŞ",	"MARDİN",	"MUĞLA",	"MUŞ",	"NEVŞEHİR",	"NİĞDE",	"ORDU",	"RİZE",	"SAKARYA",	"SAMSUN",	"SİİRT",	"SİNOP",	"SİVAS",	"TEKİRDAĞ",	"TOKAT",	"TRABZON",	"TUNCELİ",	"ŞANLIURFA",	"UŞAK",	"VAN",	"YOZGAT",	"ZONGULDAK",	"AKSARAY",	"BAYBURT",	"KARAMAN",	"KIRIKKALE",	"BATMAN",	"ŞIRNAK",	"BARTIN",	"ARDAHAN",	"IĞDIR",	"YALOVA",	"KARABÜK",	"KİLİS",	"OSMANİYE",	"DÜZCE"
+)
+```
+
+I apply msd approach by using cmdscale function.
+
+```{r}
+mds<-cmdscale(cities, eig=TRUE, k=2)
+x<-mds$points[,1]
+y<-mds$points[,2]
+```
+
+Lastly, I ploted the cities on 2d scatter plot.
+
+When we look at the plot, we can see that the graph is quite similar to real Turkey map. MSD function works well for Turkish cities.
+
+```{r}
+plot(x,y)
+text(x,y,labels=row.names(cities))
+```
+
+## Question 2
+
+I read the file.
+
+```{r}
+data <- file.choose()
+y=read.table(data)
+```
+
+I created data frame and I named the rows as film names.
+
+```{r}
+yeni_y=as.data.frame(t(y))
+rownames(yeni_y)<- c("Miss Congeniality",	"Independence Day",	"The Patriot",	"The Day After Tomorrow",	"Pirates of the Caribbean: The Curse of the Black Pearl",	"Pretty Woman",	"Forrest Gump",	"The Green Mile",	"Con Air",	"Twister",	"Sweet Home Alabama",	"Pearl Harbor",	"Armageddon",	"The Rock",	"What Women Want",	"Bruce Almighty",	"Ocean's Eleven",	"The Bourne Identity",	"The Italian Job",	"I Robot",	"American Beauty",	"How to Lose a Guy in 10 Days",	"Lethal Weapon 4",	"Shrek 2",	"Lost in Translation",	"Top Gun",	"Pulp Fiction",	"Gone in 60 Seconds",	"The Sixth Sense",	"Lord of the Rings: The Two Towers",	"Men of Honor",	"Gladiator",	"Lord of the Rings: The Fellowship of the Ring",	"Sister Act",	"Double Jeopardy",	"Two Weeks Notice",	"Troy",	"The Royal Tenenbaums",	"National Treasure",	"50 First Dates",	"Indiana Jones and the Last Crusade",	"My Big Fat Greek Wedding",	"Mystic River",	"Titanic",	"Dirty Dancing",	"Catch Me If You Can",	"Finding Nemo (Widescreen)",	"The Matrix",	"Kill Bill: Vol. 1",	"The Wedding Planner",	"The Shawshank Redemption Special Edition",	"The Last Samurai",	"John Q",	"Swordfish",	"The Bourne Supremacy",	"The Terminal",	"Men in Black II",	"Spider-Man 2",	"Braveheart",	"Men in Black",	"Ghost",	"Air Force One",	"Lord of the Rings: The Return of the King",	"Man on Fire",	"The Incredibles",	"Mr Deeds",	"Collateral",	"Spider-Man",	"Saving Private Ryan",	"Erin Brockovich",	"Monsters Inc.",	"Shrek (Full-screen)",	"The Silence of the Lambs",	"Memento",	"Tomb Raider",	"Ferris Bueller's Day Off",	"Maid in Manhattan",	"Entrapment",	"Meet the Parents",	"Dodgeball A True Underdog Story",	"Rain Man",	"Patch Adams",	"Big Fish",	"Fight Club",	"S.W.A.T.",	"Good Will Hunting",	"A Few Good Men",	"Enemy of the State",	"The General's Daughter",	"Minority Report",	"Something's Gotta Give",	"Raiders of the Lost Ark",	"Anger Management",	"Sideways",	"Kill Bill: Vol. 2",	"American Pie",	"The Fast and the Furious",	"The School of Rock",	"Napoleon Dynamite",	"The Notebook"
+)
+```
+
+I designate the distance between cities, and then I apply msd approach by using cmdscale function.
+
+```{r}
+mesafe=dist(yeni_y)
+mds=cmdscale(mesafe,k=2)
+```
+
+Lastly, I ploted the movies on 2d scatter plot.
+
+We see different ratings for movies when we look at the graph. But also it seems that sequel movies have similar ratings. For example, Lord of the Rings series. Some of the best movies on IMBD list, have similar results such as The Green Mile and Forrest Gump.
+
+```{r}
+plot(mds[,1],mds[,2],xlab="Coordinate 1", ylab="Coordinate 2", main="Netflix MDS",)
+text(mds[,1],mds[,2],labels=row.names(yeni_y))
+```
+
+## Question 3
+
+I uploaded ggplot and plotly packages for visualization. Then, I read x,y and z coordinates of hand moves.
+
+```{r}
+library(ggplot2)
+library(plotly)
+data <- file.choose()
+x=read.table(data)
+data <- file.choose()
+y=read.table(data)
+data <- file.choose()
+z=read.table(data)
+```
+
+I tried to get the first rows of every axis in order to visualize.
+
+```{r}
+a=x[2,2:316]
+b=y[2,2:316]
+c=z[2,2:316]
+```
+
+I tried several methods to visualize the coordinates both in 2D and 3D plots, but I couldn't find any appropriate method. I got error whatever I tried as a way.
+
+```{r}
+deneme=cbind(x,y,z)
+plot(deneme[1,2:4],deneme[1,317:319])
+```
+
+As the second part of the question, I wanted to apply pca function to reduce the number of dimensions. But again, I got an error due to the fact that the number of variables is more than the number of observations. I thought that I can combine only two axis instead of three but it didn't seem reasonable. Therefore, I couldn't find appropriate way to apply pca.
+
+```{r}
+#pca<-princomp(dataframe)
+```
