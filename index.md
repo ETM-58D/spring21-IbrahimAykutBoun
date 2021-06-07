@@ -10,4 +10,6 @@
 
 ## Homework 2
 
-[Here](files/Homework2.html) is my Homework 2
+[Here](files/Homework2.html) is my Homework 2's HTML document
+
+[Here](files/Homework2.Rmd) is my Homework 2's R codes
