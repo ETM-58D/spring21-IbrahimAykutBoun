@@ -13,3 +13,9 @@
 [Here](files/Homework2.html) is my Homework 2's HTML document
 
 [Here](files/Homework2.Rmd) is my Homework 2's R codes
+
+## Homework 3-4
+
+[Here](files/Homework-3-4.html) is my Homework 3-4's HTML document
+
+[Here](files/Homework3&4.Rmd) is my Homework 3-4's R codes
