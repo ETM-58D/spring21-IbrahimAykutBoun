@@ -1,0 +1,627 @@
+---
+title: "ETM 58D PROJECT"
+author: "Ibrahim Aykut - Ata Batur Erdemir"
+date: "29 06 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("dplyr")
+library("lubridate")
+library("ggplot2")
+library("glmnet")
+library("tree")
+library("randomForest")
+library("skimr")
+library("gapminder")
+```
+
+## Reading and Manipulating the Data
+
+We read the data. We converted date column’s type to date. Also, we thought that timestamp column is not necessary. Therefore it was removed.
+
+```{r}
+y=read.csv("production_data_with_weather.csv")
+y$Date=as.Date(y$Date)
+y<-y[,-c(4)]
+```
+
+## DESCRIPTIVE ANALYSIS
+
+To understand the data, we conducted some descriptive analysis. To see how production capacity changes as per hour, we ploted hour-production graph. We grouped each day’s average production value to plot time series graph.
+
+```{r}
+head(y)
+summary(y)
+plot(y$Hour,y$Production)
+sd(y$Production)
+skim(y)
+plot_data=y %>% group_by(Date) %>% summarise(avg_production=mean(Production))
+ggplot(plot_data,aes(x=Date,y=avg_production)) + scale_x_date(date_breaks = "2 month", date_labels = "%b/%Y") + geom_line() +
+  labs(x="Date",y="Average Production Per Day")
+```
+
+## TRAINING DATA SET
+
+We prefer to predict each hour’s production value seperately. Therefore, we divided the data to each hour and created the training data.
+
+```{r}
+trainingdata0=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==0)
+trainingdata1=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==1)
+trainingdata2=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==2)
+trainingdata3=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==3)
+trainingdata4=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==4)
+trainingdata5=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==5)
+trainingdata6=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==6)
+trainingdata7=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==7)
+trainingdata8=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==8)
+trainingdata9=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==9)
+trainingdata10=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==10)
+trainingdata11=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==11)
+trainingdata12=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==12)
+trainingdata13=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==13)
+trainingdata14=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==14)
+trainingdata15=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==15)
+trainingdata16=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==16)
+trainingdata17=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==17)
+trainingdata18=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==18)
+trainingdata19=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==19)
+trainingdata20=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==20)
+trainingdata21=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==21)
+trainingdata22=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==22)
+trainingdata23=filter(y,Date>=as_date('2019-10-09'),Date<as_date('2020-12-01'),Hour==23)
+```
+
+## TEST DATA SET
+
+We created the test data for each hour.
+
+```{r}
+testdata0=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==0)
+testdata1=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==1)
+testdata2=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==2)
+testdata3=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==3)
+testdata4=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==4)
+testdata5=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==5)
+testdata6=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==6)
+testdata7=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==7)
+testdata8=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==8)
+testdata9=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==9)
+testdata10=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==10)
+testdata11=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==11)
+testdata12=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==12)
+testdata13=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==13)
+testdata14=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==14)
+testdata15=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==15)
+testdata16=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==16)
+testdata17=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==17)
+testdata18=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==18)
+testdata19=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==19)
+testdata20=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==20)
+testdata21=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==21)
+testdata22=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==22)
+testdata23=filter(y,Date>=as_date('2020-12-01'),Date<as_date('2021-01-31'),Hour==23)
+```
+
+# MODEL SELECTION
+
+In this work, we decided to use linear regression, random forest, lasso regression and tree model.
+When we examined the dataset, it is seem that there is not any production from 20 pm to 5 am for all days. Therefore, we decided to train and predict observations from 5 am to 20 pm.
+
+## LINEAR REGRESSION
+
+We conducted linear regression. Firstly, we trained the model. Then, we calculated Mean Absolute Error on training data. After, we made a prediction on test dataset and calculated Mean Square Error on test data set. We did this for all hours.
+
+```{r}
+linear_model5=lm(Production~.-Date-Hour,data=trainingdata5)
+summary(linear_model5)
+linear_model5_MSE=mean((trainingdata5$Production-linear_model5$fitted.values)^2)
+linear_model5_predicted=predict(linear_model5,testdata5)
+linear_model5_MSE_test=mean((testdata5$Production-linear_model5_predicted)^2)
+
+linear_model6=lm(Production~.-Date-Hour,data=trainingdata6)
+summary(linear_model6)
+linear_model6_MSE=mean((trainingdata6$Production-linear_model6$fitted.values)^2)
+linear_model6_predicted=predict(linear_model6,testdata6)
+linear_model6_MSE_test=mean((testdata6$Production-linear_model6_predicted)^2)
+
+linear_model7=lm(Production~.-Date-Hour,data=trainingdata7)
+summary(linear_model7)
+linear_model7_MSE=mean((trainingdata7$Production-linear_model7$fitted.values)^2)
+linear_model7_predicted=predict(linear_model7,testdata7)
+linear_model7_MSE_test=mean((testdata7$Production-linear_model7_predicted)^2)
+
+linear_model8=lm(Production~.-Date-Hour,data=trainingdata8)
+summary(linear_model8)
+linear_model8_MSE=mean((trainingdata8$Production-linear_model8$fitted.values)^2)
+linear_model8_predicted=predict(linear_model8,testdata8)
+linear_model8_MSE_test=mean((testdata8$Production-linear_model8_predicted)^2)
+
+linear_model9=lm(Production~.-Date-Hour,data=trainingdata9)
+summary(linear_model9)
+linear_model9_MSE=mean((trainingdata9$Production-linear_model9$fitted.values)^2)
+linear_model9_predicted=predict(linear_model9,testdata9)
+linear_model9_MSE_test=mean((testdata9$Production-linear_model9_predicted)^2)
+
+linear_model10=lm(Production~.-Date-Hour,data=trainingdata10)
+summary(linear_model10)
+linear_model10_MSE=mean((trainingdata10$Production-linear_model10$fitted.values)^2)
+linear_model10_predicted=predict(linear_model10,testdata10)
+linear_model10_MSE_test=mean((testdata10$Production-linear_model10_predicted)^2)
+
+linear_model11=lm(Production~.-Date-Hour,data=trainingdata11)
+summary(linear_model11)
+linear_model11_MSE=mean((trainingdata11$Production-linear_model11$fitted.values)^2)
+linear_model11_predicted=predict(linear_model11,testdata11)
+linear_model11_MSE_test=mean((testdata11$Production-linear_model11_predicted)^2)
+
+linear_model12=lm(Production~.-Date-Hour,data=trainingdata12)
+summary(linear_model12)
+linear_model12_MSE=mean((trainingdata12$Production-linear_model12$fitted.values)^2)
+linear_model12_predicted=predict(linear_model12,testdata12)
+linear_model12_MSE_test=mean((testdata12$Production-linear_model12_predicted)^2)
+
+linear_model13=lm(Production~.-Date-Hour,data=trainingdata13)
+summary(linear_model13)
+linear_model13_MSE=mean((trainingdata13$Production-linear_model13$fitted.values)^2)
+linear_model13_predicted=predict(linear_model13,testdata13)
+linear_model13_MSE_test=mean((testdata13$Production-linear_model13_predicted)^2)
+
+linear_model14=lm(Production~.-Date-Hour,data=trainingdata14)
+summary(linear_model14)
+linear_model14_MSE=mean((trainingdata14$Production-linear_model14$fitted.values)^2)
+linear_model14_predicted=predict(linear_model14,testdata14)
+linear_model14_MSE_test=mean((testdata14$Production-linear_model14_predicted)^2)
+
+linear_model15=lm(Production~.-Date-Hour,data=trainingdata15)
+summary(linear_model15)
+linear_model15_MSE=mean((trainingdata15$Production-linear_model15$fitted.values)^2)
+linear_model15_predicted=predict(linear_model15,testdata15)
+linear_model15_MSE_test=mean((testdata15$Production-linear_model15_predicted)^2)
+
+linear_model16=lm(Production~.-Date-Hour,data=trainingdata16)
+summary(linear_model16)
+linear_model16_MSE=mean((trainingdata16$Production-linear_model16$fitted.values)^2)
+linear_model16_predicted=predict(linear_model16,testdata16)
+linear_model16_MSE_test=mean((testdata16$Production-linear_model16_predicted)^2)
+
+linear_model17=lm(Production~.-Date-Hour,data=trainingdata17)
+summary(linear_model17)
+linear_model17_MSE=mean((trainingdata17$Production-linear_model17$fitted.values)^2)
+linear_model17_predicted=predict(linear_model17,testdata17)
+linear_model17_MSE_test=mean((testdata17$Production-linear_model17_predicted)^2)
+
+linear_model18=lm(Production~.-Date-Hour,data=trainingdata18)
+summary(linear_model18)
+linear_model18_MSE=mean((trainingdata18$Production-linear_model18$fitted.values)^2)
+linear_model18_predicted=predict(linear_model18,testdata18)
+linear_model18_MSE_test=mean((testdata18$Production-linear_model18_predicted)^2)
+
+linear_model19=lm(Production~.-Date-Hour,data=trainingdata19)
+summary(linear_model19)
+linear_model19_MSE=mean((trainingdata19$Production-linear_model19$fitted.values)^2)
+linear_model19_predicted=predict(linear_model19,testdata19)
+linear_model19_MSE_test=mean((testdata19$Production-linear_model19_predicted)^2)
+```
+
+At the end, we calculated average Mean Square Error for all regression models.
+
+```{r}
+linear_model_Avg_MSE=mean(c(linear_model5_MSE,linear_model6_MSE,linear_model7_MSE,linear_model8_MSE,+
+                              linear_model9_MSE,linear_model10_MSE,linear_model11_MSE,linear_model12_MSE,linear_model13_MSE,+
+                              linear_model14_MSE,linear_model15_MSE,linear_model16_MSE,linear_model17_MSE,linear_model18_MSE,linear_model19_MSE))
+linear_model_Avg_MSE
+
+linear_model_Avg_MSE_test=mean(c(linear_model5_MSE_test,linear_model6_MSE_test,linear_model7_MSE_test,linear_model8_MSE_test,+
+                              linear_model9_MSE_test,linear_model10_MSE_test,linear_model11_MSE_test,linear_model12_MSE_test,linear_model13_MSE_test,+
+                              linear_model14_MSE_test,linear_model15_MSE_test,linear_model16_MSE_test,linear_model17_MSE_test,linear_model18_MSE_test,linear_model19_MSE_test))
+linear_model_Avg_MSE_test
+```
+
+## RANDOM FOREST
+
+We conducted random forest model. Firstly, we trained the model. Then, we calculated Mean Absolute Error on training data. After, we made a prediction on test dataset and calculated Mean Square Error on test data set. We did this for all hours.
+
+```{r}
+randomforest_model5=randomForest(Production~.-Date-Hour,data=trainingdata5,mtry=4,ntree=1000)
+randomforest_model5
+randomforest5_MSE=mean((trainingdata5$Production-randomforest_model5$predicted)^2)
+randomforest_predicted5=predict(randomforest_model5,newdata=testdata5)
+randomforest_predicted5_MSE=mean((testdata5$Production-randomforest_predicted5)^2)
+
+randomforest_model6=randomForest(Production~.-Date-Hour,data=trainingdata6,mtry=4,ntree=1000)
+randomforest_model6
+randomforest6_MSE=mean((trainingdata6$Production-randomforest_model6$predicted)^2)
+randomforest_predicted6=predict(randomforest_model6,newdata=testdata6)
+randomforest_predicted6_MSE=mean((testdata6$Production-randomforest_predicted6)^2)
+
+randomforest_model7=randomForest(Production~.-Date-Hour,data=trainingdata7,mtry=4,ntree=1000)
+randomforest_model7
+randomforest7_MSE=mean((trainingdata7$Production-randomforest_model7$predicted)^2)
+randomforest_predicted7=predict(randomforest_model7,newdata=testdata7)
+randomforest_predicted7_MSE=mean((testdata7$Production-randomforest_predicted7)^2)
+
+randomforest_model8=randomForest(Production~.-Date-Hour,data=trainingdata8,mtry=4,ntree=1000)
+randomforest_model8
+randomforest8_MSE=mean((trainingdata8$Production-randomforest_model8$predicted)^2)
+randomforest_predicted8=predict(randomforest_model8,newdata=testdata8)
+randomforest_predicted8_MSE=mean((testdata8$Production-randomforest_predicted8)^2)
+
+randomforest_model9=randomForest(Production~.-Date-Hour,data=trainingdata9,mtry=4,ntree=1000)
+randomforest_model9
+randomforest9_MSE=mean((trainingdata9$Production-randomforest_model9$predicted)^2)
+randomforest_predicted9=predict(randomforest_model9,newdata=testdata9)
+randomforest_predicted9_MSE=mean((testdata9$Production-randomforest_predicted9)^2)
+
+randomforest_model10=randomForest(Production~.-Date-Hour,data=trainingdata10,mtry=4,ntree=1000)
+randomforest_model10
+randomforest10_MSE=mean((trainingdata10$Production-randomforest_model10$predicted)^2)
+randomforest_predicted10=predict(randomforest_model10,newdata=testdata10)
+randomforest_predicted10_MSE=mean((testdata10$Production-randomforest_predicted10)^2)
+
+randomforest_model11=randomForest(Production~.-Date-Hour,data=trainingdata11,mtry=4,ntree=1000)
+randomforest_model11
+randomforest11_MSE=mean((trainingdata11$Production-randomforest_model11$predicted)^2)
+randomforest_predicted11=predict(randomforest_model11,newdata=testdata11)
+randomforest_predicted11_MSE=mean((testdata11$Production-randomforest_predicted11)^2)
+
+randomforest_model12=randomForest(Production~.-Date-Hour,data=trainingdata12,mtry=4,ntree=1000)
+randomforest_model12
+randomforest12_MSE=mean((trainingdata12$Production-randomforest_model12$predicted)^2)
+randomforest_predicted12=predict(randomforest_model12,newdata=testdata12)
+randomforest_predicted12_MSE=mean((testdata12$Production-randomforest_predicted12)^2)
+
+randomforest_model13=randomForest(Production~.-Date-Hour,data=trainingdata13,mtry=4,ntree=1000)
+randomforest_model13
+randomforest13_MSE=mean((trainingdata13$Production-randomforest_model13$predicted)^2)
+randomforest_predicted13=predict(randomforest_model13,newdata=testdata13)
+randomforest_predicted13_MSE=mean((testdata13$Production-randomforest_predicted13)^2)
+
+randomforest_model14=randomForest(Production~.-Date-Hour,data=trainingdata14,mtry=4,ntree=1000)
+randomforest_model14
+randomforest14_MSE=mean((trainingdata14$Production-randomforest_model14$predicted)^2)
+randomforest_predicted14=predict(randomforest_model14,newdata=testdata14)
+randomforest_predicted14_MSE=mean((testdata14$Production-randomforest_predicted14)^2)
+
+randomforest_model15=randomForest(Production~.-Date-Hour,data=trainingdata15,mtry=4,ntree=1000)
+randomforest_model15
+randomforest15_MSE=mean((trainingdata15$Production-randomforest_model15$predicted)^2)
+randomforest_predicted15=predict(randomforest_model15,newdata=testdata15)
+randomforest_predicted15_MSE=mean((testdata15$Production-randomforest_predicted15)^2)
+
+randomforest_model16=randomForest(Production~.-Date-Hour,data=trainingdata16,mtry=4,ntree=1000)
+randomforest_model16
+randomforest16_MSE=mean((trainingdata16$Production-randomforest_model16$predicted)^2)
+randomforest_predicted16=predict(randomforest_model16,newdata=testdata16)
+randomforest_predicted16_MSE=mean((testdata16$Production-randomforest_predicted16)^2)
+
+randomforest_model17=randomForest(Production~.-Date-Hour,data=trainingdata17,mtry=4,ntree=1000)
+randomforest_model17
+randomforest17_MSE=mean((trainingdata17$Production-randomforest_model17$predicted)^2)
+randomforest_predicted17=predict(randomforest_model17,newdata=testdata17)
+randomforest_predicted17_MSE=mean((testdata17$Production-randomforest_predicted17)^2)
+
+randomforest_model18=randomForest(Production~.-Date-Hour,data=trainingdata18,mtry=4,ntree=1000)
+randomforest_model18
+randomforest18_MSE=mean((trainingdata18$Production-randomforest_model18$predicted)^2)
+randomforest_predicted18=predict(randomforest_model18,newdata=testdata18)
+randomforest_predicted18_MSE=mean((testdata18$Production-randomforest_predicted18)^2)
+
+randomforest_model19=randomForest(Production~.-Date-Hour,data=trainingdata19,mtry=4,ntree=1000)
+randomforest_model19
+randomforest19_MSE=mean((trainingdata19$Production-randomforest_model19$predicted)^2)
+randomforest_predicted19=predict(randomforest_model19,newdata=testdata19)
+randomforest_predicted19_MSE=mean((testdata19$Production-randomforest_predicted19)^2)
+```
+
+At the end, we calculated average Mean Square Error for all random forest models.
+
+```{r}
+randomforest_Avg_MSE=mean(c(randomforest5_MSE,randomforest6_MSE,randomforest7_MSE,randomforest8_MSE,+
+                              randomforest9_MSE,randomforest10_MSE,randomforest11_MSE,randomforest12_MSE,randomforest13_MSE,+
+                              randomforest14_MSE,randomforest15_MSE,randomforest16_MSE,randomforest17_MSE,randomforest18_MSE,randomforest19_MSE))
+randomforest_Avg_MSE
+
+randomforest_predicted_Avg_MSE=mean(c(randomforest_predicted5_MSE,randomforest_predicted6_MSE,randomforest_predicted7_MSE,randomforest_predicted8_MSE,+
+                              randomforest_predicted9_MSE,randomforest_predicted10_MSE,randomforest_predicted11_MSE,randomforest_predicted12_MSE,randomforest_predicted13_MSE,+
+                              randomforest_predicted14_MSE,randomforest_predicted15_MSE,randomforest_predicted16_MSE,randomforest_predicted17_MSE,randomforest_predicted18_MSE,randomforest_predicted19_MSE))
+randomforest_predicted_Avg_MSE
+```
+
+## LASSO REGRESSION
+
+We conducted lasso regression. Firstly, we trained the model. Then, we calculated Mean Absolute Error on training data. After, we made a prediction on test dataset and calculated Mean Square Error on test data set. We did this for all hours.
+
+```{r}
+cv_fit5=cv.glmnet(data.matrix(trainingdata5[,-c(1,2,3)]),trainingdata5$Production,family="gaussian")
+plot(cv_fit5)
+coef(cv_fit5,s='lambda.1se')
+predicted_lasso_model5=predict(cv_fit5,data.matrix(trainingdata5[,-c(1,2,3)]),s='lambda.min')
+lasso5_MSE=mean((trainingdata5$Production-predicted_lasso_model5)^2)
+predicted_lasso_model5_test=predict(cv_fit5,data.matrix(testdata5[,-c(1,2,3)]),s='lambda.min')
+lasso5_test_MSE=mean((testdata5$Production-predicted_lasso_model5_test)^2)
+
+cv_fit6=cv.glmnet(data.matrix(trainingdata6[,-c(1,2,3)]),trainingdata6$Production,family="gaussian")
+plot(cv_fit6)
+coef(cv_fit6,s='lambda.1se')
+predicted_lasso_model6=predict(cv_fit6,data.matrix(trainingdata6[,-c(1,2,3)]),s='lambda.min')
+lasso6_MSE=mean((trainingdata6$Production-predicted_lasso_model6)^2)
+predicted_lasso_model6_test=predict(cv_fit6,data.matrix(testdata6[,-c(1,2,3)]),s='lambda.min')
+lasso6_test_MSE=mean((testdata6$Production-predicted_lasso_model6_test)^2)
+
+cv_fit7=cv.glmnet(data.matrix(trainingdata7[,-c(1,2,3)]),trainingdata7$Production,family="gaussian")
+plot(cv_fit7)
+coef(cv_fit7,s='lambda.1se')
+predicted_lasso_model7=predict(cv_fit7,data.matrix(trainingdata7[,-c(1,2,3)]),s='lambda.min')
+lasso7_MSE=mean((trainingdata7$Production-predicted_lasso_model7)^2)
+predicted_lasso_model7_test=predict(cv_fit7,data.matrix(testdata7[,-c(1,2,3)]),s='lambda.min')
+lasso7_test_MSE=mean((testdata7$Production-predicted_lasso_model7_test)^2)
+
+cv_fit8=cv.glmnet(data.matrix(trainingdata8[,-c(1,2,3)]),trainingdata8$Production,family="gaussian")
+plot(cv_fit8)
+coef(cv_fit8,s='lambda.1se')
+predicted_lasso_model8=predict(cv_fit8,data.matrix(trainingdata8[,-c(1,2,3)]),s='lambda.min')
+lasso8_MSE=mean((trainingdata8$Production-predicted_lasso_model8)^2)
+predicted_lasso_model8_test=predict(cv_fit8,data.matrix(testdata8[,-c(1,2,3)]),s='lambda.min')
+lasso8_test_MSE=mean((testdata8$Production-predicted_lasso_model8_test)^2)
+
+cv_fit9=cv.glmnet(data.matrix(trainingdata9[,-c(1,2,3)]),trainingdata9$Production,family="gaussian")
+plot(cv_fit9)
+coef(cv_fit9,s='lambda.1se')
+predicted_lasso_model9=predict(cv_fit9,data.matrix(trainingdata9[,-c(1,2,3)]),s='lambda.min')
+lasso9_MSE=mean((trainingdata9$Production-predicted_lasso_model9)^2)
+predicted_lasso_model9_test=predict(cv_fit9,data.matrix(testdata9[,-c(1,2,3)]),s='lambda.min')
+lasso9_test_MSE=mean((testdata9$Production-predicted_lasso_model9_test)^2)
+
+cv_fit10=cv.glmnet(data.matrix(trainingdata10[,-c(1,2,3)]),trainingdata10$Production,family="gaussian")
+plot(cv_fit10)
+coef(cv_fit10,s='lambda.1se')
+predicted_lasso_model10=predict(cv_fit10,data.matrix(trainingdata10[,-c(1,2,3)]),s='lambda.min')
+lasso10_MSE=mean((trainingdata10$Production-predicted_lasso_model10)^2)
+predicted_lasso_model10_test=predict(cv_fit10,data.matrix(testdata10[,-c(1,2,3)]),s='lambda.min')
+lasso10_test_MSE=mean((testdata10$Production-predicted_lasso_model10_test)^2)
+
+cv_fit11=cv.glmnet(data.matrix(trainingdata11[,-c(1,2,3)]),trainingdata11$Production,family="gaussian")
+plot(cv_fit11)
+coef(cv_fit11,s='lambda.1se')
+predicted_lasso_model11=predict(cv_fit11,data.matrix(trainingdata11[,-c(1,2,3)]),s='lambda.min')
+lasso11_MSE=mean((trainingdata11$Production-predicted_lasso_model11)^2)
+predicted_lasso_model11_test=predict(cv_fit11,data.matrix(testdata11[,-c(1,2,3)]),s='lambda.min')
+lasso11_test_MSE=mean((testdata11$Production-predicted_lasso_model11_test)^2)
+
+cv_fit12=cv.glmnet(data.matrix(trainingdata12[,-c(1,2,3)]),trainingdata12$Production,family="gaussian")
+plot(cv_fit12)
+coef(cv_fit12,s='lambda.1se')
+predicted_lasso_model12=predict(cv_fit12,data.matrix(trainingdata12[,-c(1,2,3)]),s='lambda.min')
+lasso12_MSE=mean((trainingdata12$Production-predicted_lasso_model12)^2)
+predicted_lasso_model12_test=predict(cv_fit12,data.matrix(testdata12[,-c(1,2,3)]),s='lambda.min')
+lasso12_test_MSE=mean((testdata12$Production-predicted_lasso_model12_test)^2)
+
+cv_fit13=cv.glmnet(data.matrix(trainingdata13[,-c(1,2,3)]),trainingdata13$Production,family="gaussian")
+plot(cv_fit13)
+coef(cv_fit13,s='lambda.1se')
+predicted_lasso_model13=predict(cv_fit13,data.matrix(trainingdata13[,-c(1,2,3)]),s='lambda.min')
+lasso13_MSE=mean((trainingdata13$Production-predicted_lasso_model13)^2)
+predicted_lasso_model13_test=predict(cv_fit13,data.matrix(testdata13[,-c(1,2,3)]),s='lambda.min')
+lasso13_test_MSE=mean((testdata13$Production-predicted_lasso_model13_test)^2)
+
+cv_fit14=cv.glmnet(data.matrix(trainingdata14[,-c(1,2,3)]),trainingdata14$Production,family="gaussian")
+plot(cv_fit14)
+coef(cv_fit14,s='lambda.1se')
+predicted_lasso_model14=predict(cv_fit14,data.matrix(trainingdata14[,-c(1,2,3)]),s='lambda.min')
+lasso14_MSE=mean((trainingdata14$Production-predicted_lasso_model14)^2)
+predicted_lasso_model14_test=predict(cv_fit14,data.matrix(testdata14[,-c(1,2,3)]),s='lambda.min')
+lasso14_test_MSE=mean((testdata14$Production-predicted_lasso_model14_test)^2)
+
+cv_fit15=cv.glmnet(data.matrix(trainingdata15[,-c(1,2,3)]),trainingdata15$Production,family="gaussian")
+plot(cv_fit15)
+coef(cv_fit15,s='lambda.1se')
+predicted_lasso_model15=predict(cv_fit15,data.matrix(trainingdata15[,-c(1,2,3)]),s='lambda.min')
+lasso15_MSE=mean((trainingdata15$Production-predicted_lasso_model15)^2)
+predicted_lasso_model15_test=predict(cv_fit15,data.matrix(testdata15[,-c(1,2,3)]),s='lambda.min')
+lasso15_test_MSE=mean((testdata15$Production-predicted_lasso_model15_test)^2)
+
+cv_fit16=cv.glmnet(data.matrix(trainingdata16[,-c(1,2,3)]),trainingdata16$Production,family="gaussian")
+plot(cv_fit16)
+coef(cv_fit16,s='lambda.1se')
+predicted_lasso_model16=predict(cv_fit16,data.matrix(trainingdata16[,-c(1,2,3)]),s='lambda.min')
+lasso16_MSE=mean((trainingdata16$Production-predicted_lasso_model16)^2)
+predicted_lasso_model16_test=predict(cv_fit16,data.matrix(testdata16[,-c(1,2,3)]),s='lambda.min')
+lasso16_test_MSE=mean((testdata16$Production-predicted_lasso_model16_test)^2)
+
+cv_fit17=cv.glmnet(data.matrix(trainingdata17[,-c(1,2,3)]),trainingdata17$Production,family="gaussian")
+plot(cv_fit17)
+coef(cv_fit17,s='lambda.1se')
+predicted_lasso_model17=predict(cv_fit17,data.matrix(trainingdata17[,-c(1,2,3)]),s='lambda.min')
+lasso17_MSE=mean((trainingdata17$Production-predicted_lasso_model17)^2)
+predicted_lasso_model17_test=predict(cv_fit17,data.matrix(testdata17[,-c(1,2,3)]),s='lambda.min')
+lasso17_test_MSE=mean((testdata17$Production-predicted_lasso_model17_test)^2)
+
+cv_fit18=cv.glmnet(data.matrix(trainingdata18[,-c(1,2,3)]),trainingdata18$Production,family="gaussian")
+plot(cv_fit18)
+coef(cv_fit18,s='lambda.1se')
+predicted_lasso_model18=predict(cv_fit18,data.matrix(trainingdata18[,-c(1,2,3)]),s='lambda.min')
+lasso18_MSE=mean((trainingdata18$Production-predicted_lasso_model18)^2)
+predicted_lasso_model18_test=predict(cv_fit18,data.matrix(testdata18[,-c(1,2,3)]),s='lambda.min')
+lasso18_test_MSE=mean((testdata18$Production-predicted_lasso_model18_test)^2)
+
+cv_fit19=cv.glmnet(data.matrix(trainingdata19[,-c(1,2,3)]),trainingdata19$Production,family="gaussian")
+plot(cv_fit19)
+coef(cv_fit19,s='lambda.1se')
+predicted_lasso_model19=predict(cv_fit19,data.matrix(trainingdata19[,-c(1,2,3)]),s='lambda.min')
+lasso19_MSE=mean((trainingdata19$Production-predicted_lasso_model19)^2)
+predicted_lasso_model19_test=predict(cv_fit19,data.matrix(testdata19[,-c(1,2,3)]),s='lambda.min')
+lasso19_test_MSE=mean((testdata19$Production-predicted_lasso_model19_test)^2)
+```
+
+At the end, we calculated average Mean Square Error for all lasso regression models.
+
+```{r}
+lasso_Avg_MSE=mean(c(lasso5_MSE,lasso6_MSE,lasso7_MSE,lasso8_MSE,+
+                       lasso9_MSE,lasso10_MSE,lasso11_MSE,lasso12_MSE,lasso13_MSE,+
+                       lasso14_MSE,lasso15_MSE,lasso16_MSE,lasso17_MSE,lasso18_MSE,lasso19_MSE))
+lasso_Avg_MSE
+
+lasso_Avg_test_MSE=mean(c(lasso5_test_MSE,lasso6_test_MSE,lasso7_test_MSE,lasso8_test_MSE,+
+                            lasso9_test_MSE,lasso10_test_MSE,lasso11_test_MSE,lasso12_test_MSE,lasso13_test_MSE,+
+                            lasso14_test_MSE,lasso15_test_MSE,lasso16_test_MSE,lasso17_test_MSE,lasso18_test_MSE,lasso19_test_MSE))
+lasso_Avg_test_MSE
+```
+
+## TREE MODEL
+
+We conducted tree model. Firstly, we trained the model. Then, we calculated Mean Absolute Error on training data. After, we made a prediction on test dataset and calculated Mean Square Error on test data set. We did this for all hours.
+
+```{r}
+tree_model5=tree(Production~.-Date-Hour,data=trainingdata5,minsize=2,mindev=0.001)
+predicted_tree_model5=predict(tree_model5,newdata = trainingdata5)
+tree_model5_MSE=mean((trainingdata5$Production-predicted_tree_model5)^2)
+tree_model5_predicted_test=predict(tree_model5,newdata = testdata5)
+tree_model5_MSE_test=mean((testdata5$Production-tree_model5_predicted_test)^2)
+
+tree_model6=tree(Production~.-Date-Hour,data=trainingdata6,minsize=2,mindev=0.001)
+predicted_tree_model6=predict(tree_model6,newdata = trainingdata6)
+tree_model6_MSE=mean((trainingdata6$Production-predicted_tree_model6)^2)
+tree_model6_predicted_test=predict(tree_model6,newdata = testdata6)
+tree_model6_MSE_test=mean((testdata6$Production-tree_model6_predicted_test)^2)
+
+tree_model7=tree(Production~.-Date-Hour,data=trainingdata7,minsize=2,mindev=0.001)
+predicted_tree_model7=predict(tree_model7,newdata = trainingdata7)
+tree_model7_MSE=mean((trainingdata7$Production-predicted_tree_model7)^2)
+tree_model7_predicted_test=predict(tree_model7,newdata = testdata7)
+tree_model7_MSE_test=mean((testdata7$Production-tree_model7_predicted_test)^2)
+
+tree_model8=tree(Production~.-Date-Hour,data=trainingdata8,minsize=2,mindev=0.001)
+predicted_tree_model8=predict(tree_model8,newdata = trainingdata8)
+tree_model8_MSE=mean((trainingdata8$Production-predicted_tree_model8)^2)
+tree_model8_predicted_test=predict(tree_model8,newdata = testdata8)
+tree_model8_MSE_test=mean((testdata8$Production-tree_model8_predicted_test)^2)
+
+tree_model9=tree(Production~.-Date-Hour,data=trainingdata9,minsize=2,mindev=0.001)
+predicted_tree_model9=predict(tree_model9,newdata = trainingdata9)
+tree_model9_MSE=mean((trainingdata9$Production-predicted_tree_model9)^2)
+tree_model9_predicted_test=predict(tree_model9,newdata = testdata9)
+tree_model9_MSE_test=mean((testdata9$Production-tree_model9_predicted_test)^2)
+
+tree_model10=tree(Production~.-Date-Hour,data=trainingdata10,minsize=2,mindev=0.001)
+predicted_tree_model10=predict(tree_model10,newdata = trainingdata10)
+tree_model10_MSE=mean((trainingdata10$Production-predicted_tree_model10)^2)
+tree_model10_predicted_test=predict(tree_model10,newdata = testdata10)
+tree_model10_MSE_test=mean((testdata10$Production-tree_model10_predicted_test)^2)
+
+tree_model11=tree(Production~.-Date-Hour,data=trainingdata11,minsize=2,mindev=0.001)
+predicted_tree_model11=predict(tree_model11,newdata = trainingdata11)
+tree_model11_MSE=mean((trainingdata11$Production-predicted_tree_model11)^2)
+tree_model11_predicted_test=predict(tree_model11,newdata = testdata11)
+tree_model11_MSE_test=mean((testdata11$Production-tree_model11_predicted_test)^2)
+
+tree_model12=tree(Production~.-Date-Hour,data=trainingdata12,minsize=2,mindev=0.001)
+predicted_tree_model12=predict(tree_model12,newdata = trainingdata12)
+tree_model12_MSE=mean((trainingdata12$Production-predicted_tree_model12)^2)
+tree_model12_predicted_test=predict(tree_model12,newdata = testdata12)
+tree_model12_MSE_test=mean((testdata12$Production-tree_model12_predicted_test)^2)
+
+tree_model13=tree(Production~.-Date-Hour,data=trainingdata13,minsize=2,mindev=0.001)
+predicted_tree_model13=predict(tree_model13,newdata = trainingdata13)
+tree_model13_MSE=mean((trainingdata13$Production-predicted_tree_model13)^2)
+tree_model13_predicted_test=predict(tree_model13,newdata = testdata13)
+tree_model13_MSE_test=mean((testdata13$Production-tree_model13_predicted_test)^2)
+
+tree_model14=tree(Production~.-Date-Hour,data=trainingdata14,minsize=2,mindev=0.001)
+predicted_tree_model14=predict(tree_model14,newdata = trainingdata14)
+tree_model14_MSE=mean((trainingdata14$Production-predicted_tree_model14)^2)
+tree_model14_predicted_test=predict(tree_model14,newdata = testdata14)
+tree_model14_MSE_test=mean((testdata14$Production-tree_model14_predicted_test)^2)
+
+tree_model15=tree(Production~.-Date-Hour,data=trainingdata15,minsize=2,mindev=0.001)
+predicted_tree_model15=predict(tree_model15,newdata = trainingdata15)
+tree_model15_MSE=mean((trainingdata15$Production-predicted_tree_model15)^2)
+tree_model15_predicted_test=predict(tree_model15,newdata = testdata15)
+tree_model15_MSE_test=mean((testdata15$Production-tree_model15_predicted_test)^2)
+
+tree_model16=tree(Production~.-Date-Hour,data=trainingdata16,minsize=2,mindev=0.001)
+predicted_tree_model16=predict(tree_model16,newdata = trainingdata16)
+tree_model16_MSE=mean((trainingdata16$Production-predicted_tree_model16)^2)
+tree_model16_predicted_test=predict(tree_model16,newdata = testdata16)
+tree_model16_MSE_test=mean((testdata16$Production-tree_model16_predicted_test)^2)
+
+tree_model17=tree(Production~.-Date-Hour,data=trainingdata17,minsize=2,mindev=0.001)
+predicted_tree_model17=predict(tree_model17,newdata = trainingdata17)
+tree_model17_MSE=mean((trainingdata17$Production-predicted_tree_model17)^2)
+tree_model17_predicted_test=predict(tree_model17,newdata = testdata17)
+tree_model17_MSE_test=mean((testdata17$Production-tree_model17_predicted_test)^2)
+
+tree_model18=tree(Production~.-Date-Hour,data=trainingdata18,minsize=2,mindev=0.001)
+predicted_tree_model18=predict(tree_model18,newdata = trainingdata18)
+tree_model18_MSE=mean((trainingdata18$Production-predicted_tree_model18)^2)
+tree_model18_predicted_test=predict(tree_model18,newdata = testdata18)
+tree_model18_MSE_test=mean((testdata18$Production-tree_model18_predicted_test)^2)
+
+tree_model19=tree(Production~.-Date-Hour,data=trainingdata19,minsize=2,mindev=0.001)
+predicted_tree_model19=predict(tree_model19,newdata = trainingdata19)
+tree_model19_MSE=mean((trainingdata19$Production-predicted_tree_model19)^2)
+tree_model19_predicted_test=predict(tree_model19,newdata = testdata19)
+tree_model19_MSE_test=mean((testdata19$Production-tree_model19_predicted_test)^2)
+```
+
+At the end, we calculated average Mean Square Error for all tree models.
+
+```{r}
+tree_model_Avg_MSE=mean(c(tree_model5_MSE,tree_model6_MSE,tree_model7_MSE,tree_model8_MSE,+
+                       tree_model9_MSE,tree_model10_MSE,tree_model11_MSE,tree_model12_MSE,tree_model13_MSE,+
+                       tree_model14_MSE,tree_model15_MSE,tree_model16_MSE,tree_model17_MSE,tree_model18_MSE,tree_model19_MSE))
+tree_model_Avg_MSE
+
+
+tree_model_Avg_MSE_test=mean(c(tree_model5_MSE_test,tree_model6_MSE_test,tree_model7_MSE_test,tree_model8_MSE_test,+
+                            tree_model9_MSE_test,tree_model10_MSE_test,tree_model11_MSE_test,tree_model12_MSE_test,tree_model13_MSE_test,+
+                            tree_model14_MSE_test,tree_model15_MSE_test,tree_model16_MSE_test,tree_model17_MSE_test,tree_model18_MSE_test,tree_model19_MSE_test))
+tree_model17_MSE_test
+```
+
+## COMPARISON OF ERRORS FOR DIFFERENT MODELS
+
+**In the below table, we can see different model average errors. Tree model has minimum error for both training and test data set. Therefore, we used the test data set's prediction values as final prediction.**
+
+|Linear Regression |Random Forest | Lasso Regression| Tree Model|
+|-------|----|---|---|
+|Train Error,Test Error|Train Error,Test Error|Train Error,Test Error|Train Error,Test Error|
+|12.2,21.99|12.82,21.61|12.4,22.53|1.3,14.89|
+
+
+## ADDING FINAL PREDICTIONS TO THE DATASET
+
+We added tree model’s prediction to the data set.
+
+```{r}
+testdata5_f =mutate(testdata5,prediction=tree_model5_predicted_test)
+testdata6_f =mutate(testdata6,prediction=tree_model6_predicted_test)
+testdata7_f =mutate(testdata7,prediction=tree_model7_predicted_test)
+testdata8_f =mutate(testdata8,prediction=tree_model8_predicted_test)
+testdata9_f =mutate(testdata9,prediction=tree_model9_predicted_test)
+testdata10_f =mutate(testdata10,prediction=tree_model10_predicted_test)
+testdata11_f =mutate(testdata11,prediction=tree_model11_predicted_test)
+testdata12_f =mutate(testdata12,prediction=tree_model12_predicted_test)
+testdata13_f =mutate(testdata13,prediction=tree_model13_predicted_test)
+testdata14_f =mutate(testdata14,prediction=tree_model14_predicted_test)
+testdata15_f =mutate(testdata15,prediction=tree_model15_predicted_test)
+testdata16_f =mutate(testdata16,prediction=tree_model16_predicted_test)
+testdata17_f =mutate(testdata17,prediction=tree_model17_predicted_test)
+testdata18_f =mutate(testdata18,prediction=tree_model18_predicted_test)
+testdata19_f =mutate(testdata19,prediction=tree_model19_predicted_test)
+```
+
+We brought together the final predictions and removed features. We can see realized production values and our predictions together.
+
+```{r}
+final_prediction=rbind(testdata5_f,testdata6_f,testdata7_f,testdata8_f,testdata9_f,testdata10_f,testdata11_f,testdata12_f,+
+                         testdata13_f,testdata14_f,testdata15_f,testdata16_f,testdata17_f,testdata18_f,testdata19_f)
+
+final_prediction<-final_prediction[,c(1,2,3,16)]
+final_prediction<-arrange(final_prediction,Date,Hour)
+final_prediction
+```
